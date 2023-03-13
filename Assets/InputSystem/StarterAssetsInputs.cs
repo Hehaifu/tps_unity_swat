@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
 using UnityEngine.InputSystem;
@@ -13,6 +14,11 @@ namespace StarterAssets
 		public bool jump;
 		public bool sprint;
 		public bool aim;
+		public bool weaponState = false;
+		private Animator _animator;
+		private int _animIDCarry;
+		private int _animIDUnCarry;
+		
 
 		[Header("Movement Settings")]
 		public bool analogMovement;
@@ -22,7 +28,15 @@ namespace StarterAssets
 		public bool cursorInputForLook = true;
 
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
-		public void OnMove(InputValue value)
+
+        private void Awake()
+        {
+			_animator = GetComponent<Animator>();
+			_animIDCarry = Animator.StringToHash("Carry");
+			_animIDUnCarry = Animator.StringToHash("Uncarry");
+
+		}
+        public void OnMove(InputValue value)
 		{
 			MoveInput(value.Get<Vector2>());
 		}
@@ -49,10 +63,30 @@ namespace StarterAssets
         {
 			AimInput(value.isPressed);
         }
+
+		public void OnWeapon(InputValue value)
+        {
+            if(value.isPressed){
+				WeaponInput();
+            }
+        }
+
+        private void WeaponInput()
+        {
+			weaponState = !weaponState;
+            if (weaponState)
+            {
+				_animator.SetTrigger(_animIDCarry);
+            }
+            else
+            {
+				_animator.SetTrigger(_animIDUnCarry);
+			}
+		}
 #endif
 
 
-		public void MoveInput(Vector2 newMoveDirection)
+        public void MoveInput(Vector2 newMoveDirection)
 		{
 			move = newMoveDirection;
 		} 

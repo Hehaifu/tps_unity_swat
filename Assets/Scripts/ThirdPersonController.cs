@@ -97,6 +97,7 @@ namespace StarterAssets
         private int _animIDJump;
         private int _animIDFreeFall;
         private int _animIDMotionSpeed;
+        private int _animIDWeapon;
 
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
         private PlayerInput _playerInput;
@@ -159,6 +160,19 @@ namespace StarterAssets
             JumpAndGravity();
             GroundedCheck();
             Move();
+            PutWeapon();
+        }
+
+        private void PutWeapon()
+        {
+            if (_input.weaponState) 
+            {
+                _animator.SetBool(_animIDWeapon,true);
+            }
+            else
+            {
+                _animator.SetBool(_animIDWeapon, false);
+            }
         }
 
         private void LateUpdate()
@@ -173,6 +187,7 @@ namespace StarterAssets
             _animIDJump = Animator.StringToHash("Jump");
             _animIDFreeFall = Animator.StringToHash("FreeFall");
             _animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
+            _animIDWeapon = Animator.StringToHash("Weapon");
         }
 
         private void GroundedCheck()
@@ -257,9 +272,9 @@ namespace StarterAssets
             {
                 _targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg +
                                   _mainCamera.transform.eulerAngles.y;
-                float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, _targetRotation, ref _rotationVelocity,
-                    RotationSmoothTime);
-
+                //float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, _targetRotation, ref _rotationVelocity,RotationSmoothTime);
+                float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, _mainCamera.transform.eulerAngles.y
+                    , ref _rotationVelocity, RotationSmoothTime);
                 // rotate to face input direction relative to camera position
                 transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
             }
