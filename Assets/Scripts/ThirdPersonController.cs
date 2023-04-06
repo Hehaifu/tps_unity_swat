@@ -75,6 +75,12 @@ namespace StarterAssets
         [Tooltip("For locking the camera position on all axis")]
         public bool LockCameraPosition = false;
 
+        [Tooltip("Sensitivity of the mouse")]
+        public float mouseSensitivity = 1.0f;
+
+        public float weaponRotationSmoothTime = 0.02f;
+
+        [SerializeField] Transform aimSpine;
         // cinemachine
         private float _cinemachineTargetYaw;
         private float _cinemachineTargetPitch;
@@ -111,6 +117,8 @@ namespace StarterAssets
 
         private bool _hasAnimator;
 
+        private WeaponManager _weaponManager;
+
         private bool IsCurrentDeviceMouse
         {
             get
@@ -136,7 +144,7 @@ namespace StarterAssets
         private void Start()
         {
             _cinemachineTargetYaw = CinemachineCameraTarget.transform.rotation.eulerAngles.y;
-            
+
             _hasAnimator = TryGetComponent(out _animator);
             _controller = GetComponent<CharacterController>();
             _input = GetComponent<StarterAssetsInputs>();
@@ -147,7 +155,7 @@ namespace StarterAssets
 #endif
 
             AssignAnimationIDs();
-
+            _weaponManager = GetComponent<WeaponManager>();
             // reset our timeouts on start
             _jumpTimeoutDelta = JumpTimeout;
             _fallTimeoutDelta = FallTimeout;
@@ -165,9 +173,9 @@ namespace StarterAssets
 
         private void PutWeapon()
         {
-            if (_input.weaponState) 
+            if (_input.weaponState)
             {
-                _animator.SetBool(_animIDWeapon,true);
+                _animator.SetBool(_animIDWeapon, true);
             }
             else
             {
@@ -175,9 +183,30 @@ namespace StarterAssets
             }
         }
 
+        void WeaponRecoilShake()
+        {
+            float recoilX = Random.Range(2,8);
+            if (_weaponManager.IsGunFiring()) 
+            {
+                //aimSpine.localRotation = Quaternion.Euler(_mainCamera.transform.localEulerAngles.x - recoilX,
+                //       aimSpine.localEulerAngles.y, aimSpine.localEulerAngles.z);
+                Vector3 originalRotation = _mainCamera.transform.localRotation.eulerAngles;
+                float camFulerX = _mainCamera.transform.localRotation.eulerAngles.x;
+                _mainCamera.transform.localRotation = Quaternion.Euler(camFulerX - recoilX,originalRotation.y,originalRotation.z);
+                aimSpine.localRotation = Quaternion.Euler(_mainCamera.transform.localEulerAngles.x,
+                      aimSpine.localEulerAngles.y, aimSpine.localEulerAngles.z);
+            }
+        }
+
         private void LateUpdate()
         {
             CameraRotation();
+            //vertical aim
+            if (_input.weaponState) 
+            {
+                aimSpine.localRotation = Quaternion.Euler(_mainCamera.transform.localEulerAngles.x,
+                       aimSpine.localEulerAngles.y, aimSpine.localEulerAngles.z);
+            }
         }
 
         private void AssignAnimationIDs()
@@ -213,8 +242,8 @@ namespace StarterAssets
                 //Don't multiply mouse input by Time.deltaTime;
                 float deltaTimeMultiplier = IsCurrentDeviceMouse ? 1.0f : Time.deltaTime;
 
-                _cinemachineTargetYaw += _input.look.x * deltaTimeMultiplier;
-                _cinemachineTargetPitch += _input.look.y * deltaTimeMultiplier;
+                _cinemachineTargetYaw += _input.look.x * deltaTimeMultiplier * mouseSensitivity;
+                _cinemachineTargetPitch += _input.look.y * deltaTimeMultiplier * mouseSensitivity;
             }
 
             // clamp our rotations so our values are limited 360 degrees
@@ -270,13 +299,35 @@ namespace StarterAssets
             // if there is a move input rotate player when the player is moving
             if (_input.move != Vector2.zero)
             {
+                if (_input.weaponState)
+                {
+                    //float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, _targetRotation, ref _rotationVelocity,RotationSmoothTime);
+                    float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, _mainCamera.transform.eulerAngles.y
+                        , ref _rotationVelocity, RotationSmoothTime);
+                    // rotate to face input direction relative to camera position
+                    transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+
+                   
+                }
+                else
+                {
+                    float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y,_targetRotation,
+                        ref _rotationVelocity, RotationSmoothTime);
+                    transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+                }
                 _targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg +
                                   _mainCamera.transform.eulerAngles.y;
-                //float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, _targetRotation, ref _rotationVelocity,RotationSmoothTime);
-                float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, _mainCamera.transform.eulerAngles.y
-                    , ref _rotationVelocity, RotationSmoothTime);
-                // rotate to face input direction relative to camera position
-                transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+                
+            }
+            else
+            {
+                if (_input.weaponState)
+                {
+                    float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, _mainCamera.transform.eulerAngles.y
+                    , ref _rotationVelocity, weaponRotationSmoothTime);
+                    Vector3 camAngle = new Vector3(0.0f, rotation, 0.0f);
+                    transform.rotation = Quaternion.Euler(camAngle);
+                }
             }
 
 
@@ -402,6 +453,11 @@ namespace StarterAssets
             {
                 AudioSource.PlayClipAtPoint(LandingAudioClip, transform.TransformPoint(_controller.center), FootstepAudioVolume);
             }
+        }
+
+        public void SetMouseSensitivity(float sensitivity) 
+        {
+            mouseSensitivity = sensitivity;
         }
     }
 }

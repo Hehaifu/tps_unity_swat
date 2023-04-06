@@ -15,10 +15,9 @@ namespace StarterAssets
 		public bool sprint;
 		public bool aim;
 		public bool weaponState = false;
-		private Animator _animator;
-		private int _animIDCarry;
-		private int _animIDUnCarry;
 		
+		public int weaponIdx;
+
 
 		[Header("Movement Settings")]
 		public bool analogMovement;
@@ -27,13 +26,24 @@ namespace StarterAssets
 		public bool cursorLocked = true;
 		public bool cursorInputForLook = true;
 
+		private Animator _animator;
+		private int _animIDCarry;
+		private int _animIDUnCarry;
+		private int _animIDPickUp;
+
+		private WeaponManager _weaponManager;
+
+
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
 
-        private void Awake()
+		private void Awake()
         {
 			_animator = GetComponent<Animator>();
+			_weaponManager = GetComponent<WeaponManager>();
 			_animIDCarry = Animator.StringToHash("Carry");
 			_animIDUnCarry = Animator.StringToHash("Uncarry");
+			_animIDPickUp = Animator.StringToHash("PickItem");
+			weaponIdx = 0;
 
 		}
         public void OnMove(InputValue value)
@@ -71,22 +81,121 @@ namespace StarterAssets
             }
         }
 
-        private void WeaponInput()
+		public void OnUsePrevWeapon(InputValue value)
+        {
+			
+            if (value.isPressed)
+            {
+				_weaponManager.UsePrevWeapon();
+            }
+        }
+
+        public void OnNextWeapon(InputValue value)
+		{
+			
+			if (value.isPressed)
+			{
+				_weaponManager.UseNextWeapon();
+
+			}
+		}
+
+		public void OnPickUp(InputValue value)
+        {
+            if (value.isPressed)
+            {
+				processPickUp();
+			}
+        }
+
+		public void OnFire(InputValue value)
+        {
+			if (value.isPressed)
+			{
+				FireWeapon();
+			}
+		}
+
+		public void OnGrenade(InputValue value)
+        {
+			if (value.isPressed)
+			{
+				ThrowGrenade();
+			}
+		}
+		public void OnThrowWeapon(InputValue value)
+        {
+			if (value.isPressed)
+			{
+				ThrowWeapon();
+			}
+		}
+
+        private void ThrowWeapon()
+        {
+            if (weaponState)
+            {
+				_weaponManager.ThrowWeapon();
+            }
+            else
+            {
+				print("can not throw weapon");
+            }
+        }
+
+        private void ThrowGrenade()
+        {
+			_weaponManager.ThrowGrenade();
+
+		}
+
+        private void FireWeapon()
+        {
+			if (!weaponState)
+			{
+				WeaponInput();
+				//_animator.SetTrigger(_animIDCarry);
+				//weaponState = true;
+				return;
+			}
+			_weaponManager.FireWeapon();
+
+		}
+
+        private void processPickUp()
+        {
+			if(TPSShootController.toBePickedUp != null)
+            {
+				_animator.SetTrigger(_animIDPickUp);
+			}
+        }
+
+		private void WeaponInput()
         {
 			weaponState = !weaponState;
             if (weaponState)
             {
-				_animator.SetTrigger(_animIDCarry);
-            }
+				if (!_weaponManager.hasWeapon())
+				{
+					weaponState = false;
+					return;
+				}
+				_animator.SetTrigger(_animIDCarry); //动画事件为PickUpCurrentObject()，在TPSShootController脚本中
+			}
             else
             {
 				_animator.SetTrigger(_animIDUnCarry);
 			}
 		}
+
+		private void SwitchWeapon(int currentweaponIdx)
+		{
+			
+		}
 #endif
 
 
-        public void MoveInput(Vector2 newMoveDirection)
+		public void MoveInput(Vector2 newMoveDirection)
 		{
 			move = newMoveDirection;
 		} 
@@ -110,6 +219,7 @@ namespace StarterAssets
         {
 			aim = newAimState;
 		}
+
 
 		private void OnApplicationFocus(bool hasFocus)
 		{
